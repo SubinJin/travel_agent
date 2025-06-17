@@ -21,10 +21,21 @@ class OpenAIClient:
 
         return response.choices[0].message.content.strip().lower()
     
-    def stream_chat(self, user_input: str):
+    # def stream_chat(self, user_input: str):
+    #     return self.client.chat.completions.create(
+    #         model=self.model_name,
+    #         messages=[{"role": "user", "content": user_input}],
+    #         stream=True,
+    #     )
+        
+    def stream_chat(self, messages: list[dict]):
+        """
+        messages: List of {"role": "user"|"assistant", "content": "..."} 
+        containing full history  새로운 user 입력
+        """
         return self.client.chat.completions.create(
             model=self.model_name,
-            messages=[{"role": "user", "content": user_input}],
+            messages=messages,
             stream=True,
         )
     

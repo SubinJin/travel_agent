@@ -1,43 +1,33 @@
-# services/orchestrator.py
 
-from typing import List
-from typing import Literal
+import logging
 from llm.llm_client import LLMClient
 
-# 사용할 수 있는 에이전트 이름들 정의 (현재는 2개만 예시)
-ALL_AGENTS = {
-    "calendar": "여행 일정을 만들었으니, 숙소도 정해볼까요?",
-    "weather": "날씨도 확인하셨으니, 이제 일정을 계획해보시는 건 어때요?",
-    "share": "계획을 다 짜셨다면 외부에 공유해보세요!",
-    "budget": "예산 계산도 도와드릴 수 있어요!",
-    "food": "맛집이나 관광지 추천도 필요하신가요?"
-}
+logger = logging.getLogger(__name__)
 
-def suggest_next_action(used_agents: List[str]) -> str:
-    # 안 쓴 agent 리스트
-    remaining = [a for a in ALL_AGENTS.keys() if a not in used_agents]
+_client = LLMClient(service_name="openai", model_name="gpt-4o").get_client()
 
-    if not remaining:
-        return ""  # 모두 사용했으면 추천 없음
+def llm_intent_router(user_input: str) -> str:
+    intent = _client.classify_intent(user_input)
+    logger.info(f"인텐트 추론 결과: {intent} | 입력: {user_input}")
+    valid = {"calendar","weather","menu", "reservation", "unknown"}
+    return intent if intent in valid else "unknown"
 
-    # 가장 먼저 안 쓴 거 하나 추천 (LLM 없이 rule 기반)
-    next_agent = remaining[0]
-    suggestion = ALL_AGENTS[next_agent]
+def stream_agent(user_input: str, chat_history: list[tuple[str, str]]):
+    # 1) 과거 대화 맥락을 messages 리스트로 변환
+    messages = []
+    for sender, text in chat_history:
+        role = "user" if sender == "user" else "assistant"
+        messages.append({"role": role, "content": text})
+    # 2) 새 user 입력 추가
+    intent = llm_intent_router(user_input)
+    prompt = f"[{intent.upper()} Agent] 사용자 요청: {user_input}"
+    messages.append({"role": "user", "content": prompt})
 
-    return f"{suggestion}"
+    # 3) 스트리밍
+    for chunk in _client.stream_chat(messages):
+        yield chunk
 
-IntentType = Literal["calendar", "weather", "share", "unknown"]
+# # router 노드용 (그대로 전달만)
+# def router_node(state: dict) -> dict:
+#     return state
 
-def llm_intent_router(state: dict) -> str:
-    user_input = state["user_input"]
-    client = LLMClient(service_name="openai", model_name="gpt-4o").get_client()
-
-    intent = client.classify_intent(user_input)
-
-    # 방어적으로 처리
-    valid_intents = {"calendar", "weather", "menu", "share", "unknown"}
-    return intent if intent in valid_intents else "unknown"
-
-# router 노드용 (그대로 전달만)
-def router_node(state: dict) -> dict:
-    return state
