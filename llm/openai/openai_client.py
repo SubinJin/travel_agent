@@ -21,28 +21,32 @@ class OpenAIClient:
 
         return response.choices[0].message.content.strip().lower()
     
-    # def stream_chat(self, user_input: str):
-    #     return self.client.chat.completions.create(
-    #         model=self.model_name,
-    #         messages=[{"role": "user", "content": user_input}],
-    #         stream=True,
-    #     )
-        
-    def stream_chat(self, messages: list[dict]):
-        """
-        messages: List of {"role": "user"|"assistant", "content": "..."} 
-        containing full history  새로운 user 입력
-        """
-        return self.client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,
-            stream=True,
-        )
-    
-    def chat(self, user_input: str) -> str:
+    def chat_singleturn(self, user_input: str, system_prompt: str = "") -> str:
+        messages = []
+
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": user_input})
         response = self.client.chat.completions.create(
             model=self.model_name,
-            messages=[{"role": "user", "content": user_input}],
+            messages=messages,
+            temperature=0,
+        )
+        return response.choices[0].message.content.strip()
+    
+    def chat_multiturn(self, user_input: str, system_prompt: str = "", chat_history: list = None) -> str:
+        messages = []
+
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        if chat_history:
+            for m in chat_history:
+                if isinstance(m, dict) and "role" in m and "content" in m:
+                    messages.append(m)
+        # messages.append({"role": "user", "content": user_input})
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=messages,
             temperature=0,
         )
         return response.choices[0].message.content.strip()
