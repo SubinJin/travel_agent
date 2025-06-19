@@ -18,7 +18,7 @@ def llm_intent_router(state: GraphState) -> GraphState:
     intent = _client.classify_intent(user_input)
     logger.info(f"[라우터] 인텐트 추론 결과: {intent} | 입력: {user_input}")
 
-    valid = {"calendar", "weather", "menu", "reservation", "unknown"}
+    valid = {"calendar", "weather", "menu", "reservation", "location_search", "unknown"}
     intent = intent if intent in valid else "unknown"
     if not intent:
         intent = "unknown"

@@ -4,6 +4,8 @@ from services.orchestrator import llm_intent_router #,router_node
 from llm.llm_client import LLMClient
 from graphs.graph_state import GraphState
 from agents.reservation_agent import fill_slots
+from agents.location_search_agent import location_search_agent
+from agents.location_search_api_agent import location_search_api_agent
 
 from prompts.prompts import AGENT_DEFAULT_SYSTEM_PROMPT
 
@@ -15,6 +17,37 @@ def router_node(state: GraphState) -> GraphState:
     intent = next_state["intent"]
     logger.info(f"[라우터] 인텐트 라우팅 결과: {intent}")
     return next_state
+
+# 장소 검색 에이전트 호출    
+def run_location_search(state: GraphState) -> GraphState:
+    logger.info("[run_location_search] 검색 노드 진입")
+    result = location_search_agent(state)
+    
+    # LangGraph에 선언된 GraphState 필드만 추출해서 전달
+    return {
+        "user_input": result["user_input"],
+        "intent": result["intent"],
+        "agent_response": result["agent_response"],
+        "active_agent": result["active_agent"],
+        "agent_state": result["agent_state"],
+        "chat_history": result.get("chat_history", []),
+    }
+    
+# 장소 상세 검색 API 에이전트 호출
+def run_location_search_api(state: GraphState) -> GraphState:
+    logger.info("[run_location_search_api] API 검색 노드 진입")
+    result = location_search_api_agent(state)
+    
+    # LangGraph에 선언된 GraphState 필드만 추출해서 전달
+    return {
+        "user_input": result["user_input"],
+        "intent": result["intent"],
+        "agent_response": result["agent_response"],
+        "active_agent": result["active_agent"],
+        "agent_state": result["agent_state"],
+        "chat_history": result.get("chat_history", []),
+    }
+
 
 # 예약 에이전트 호출    
 def run_reservation(state: GraphState) -> GraphState:
@@ -36,7 +69,7 @@ def run_reservation(state: GraphState) -> GraphState:
 def run_calendar(state: GraphState) -> GraphState:
     user_input = state["user_input"]
 
-    response = client.chat(user_input)
+    response = client.chat_multiturn(user_input)
 
     return {
         **state,
@@ -47,7 +80,7 @@ def run_calendar(state: GraphState) -> GraphState:
 # 날씨 에이전트 호출
 def run_weather(state: GraphState) -> GraphState:
     user_input = state["user_input"]
-    response = client.chat(user_input)
+    response = client.chat_multiturn(user_input)
 
     return {
         **state,
@@ -58,7 +91,7 @@ def run_weather(state: GraphState) -> GraphState:
 # 메뉴 (그냥 GPT 호출해서 응답 리턴)
 def run_menu(state: GraphState) -> GraphState:
     user_input = state["user_input"]
-    response = client.chat(user_input)
+    response = client.chat_multiturn(user_input)
 
     return {
         **state,
@@ -75,7 +108,7 @@ def run_fallback(state: GraphState) -> GraphState:
     formatted_history = [{"role": r, "content": c} for (r, c) in chat_history]
     logger.info(f"[일반] chat_history : {formatted_history}")
     
-    response = client.chat(user_input = user_input, system_prompt = system_prompt, chat_history = formatted_history)
+    response = client.chat_multiturn(user_input = user_input, system_prompt = system_prompt, chat_history = formatted_history)
 
     return {
         **state,
@@ -92,6 +125,8 @@ def build_graph():
     # workflow.add_node("weather", run_weather)
     workflow.add_node("menu", run_menu)
     workflow.add_node("reservation", run_reservation)
+    workflow.add_node("location_search", run_location_search)
+    workflow.add_node("location_search_api", run_location_search_api)
     workflow.add_node("unknown", run_fallback)
 
     workflow.set_entry_point("router")
@@ -104,13 +139,16 @@ def build_graph():
             # "weather": "weather",
             "menu": "menu",
             "reservation" : "reservation",
+            "location_search" : "location_search",
+            "location_search_api" : "location_search_api", 
             "unknown": "unknown"
         }
     )
     workflow.add_edge("calendar", END)
-    # workflow.add_edge("weather", END)
     workflow.add_edge("menu", END)
     workflow.add_edge("reservation", END)
+    workflow.add_edge("location_search", END)
+    workflow.add_edge("location_search_api", END)
     workflow.add_edge("unknown", END)
 
     return workflow.compile()

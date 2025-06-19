@@ -6,3 +6,4 @@ load_dotenv()
 
 # OpenAI API 키
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GOOGLE_PLACE_KEY = os.getenv("GOOGLE_PLACE_KEY")
