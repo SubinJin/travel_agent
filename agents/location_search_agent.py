@@ -6,6 +6,7 @@ import logging
 from langchain_core.tools import tool
 from llm.llm_client import LLMClient
 from prompts.prompts import JUDGE_RESERVATION_SYSTEM, LOCATION_SEARCH_SYSTEM_PROMPT
+from common.forms import LocationSchema
 
 logger = logging.getLogger(__name__)
 llm = LLMClient(service_name="openai", model_name="gpt-4o").get_client()
@@ -53,19 +54,20 @@ def location_search_agent(state: dict) -> dict:
         user_input = user_input,
         )
     logger.info(f"[장소검색] user_input : {user_input}")
-    llm_output = llm.chat_multiturn(system_prompt = system_prompt, user_input = user_input).strip()
+    # llm_output = llm.chat_multiturn(system_prompt = system_prompt, user_input = user_input).strip()
+    llm_output = llm.chat_multiturn_structured(system_prompt = system_prompt, user_input = user_input, response_format=LocationSchema)
     logger.info(f"[장소검색] LLM 응답: {llm_output}")
     
     try:
-        cleaned = extract_json_string(llm_output)
-        result = json.loads(cleaned)
+        # cleaned = extract_json_string(llm_output)
+        # result = json.loads(cleaned)
 
         updated_slots = {
-            "region": result.get("region") or slots.get("region", ""),
-            "selected_place": result.get("selected_place") or slots.get("selected_place", ""),
-            "detail_search": result.get("detail_search") or slots.get("detail_search", "")
+            "region": llm_output.region or slots.get("region", ""),
+            "selected_place": llm_output.selected_place or slots.get("selected_place", ""),
+            "detail_search": llm_output.detail_search or slots.get("detail_search", "")
         }
-        message = result.get("message", "죄송합니다. 응답을 생성하지 못했습니다.")
+        message = llm_output.message
 
         # 2) detail_search 채워지면 종료
         if updated_slots.get("detail_search"):

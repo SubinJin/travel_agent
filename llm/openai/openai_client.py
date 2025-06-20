@@ -2,6 +2,9 @@ import os
 from openai import OpenAI
 from prompts.prompts import INTENT_CLASSIFIER
 from dotenv import load_dotenv
+from typing import Type
+from pydantic import BaseModel
+
 
 load_dotenv()
 
@@ -47,6 +50,22 @@ class OpenAIClient:
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
-            temperature=0,
         )
         return response.choices[0].message.content.strip()
+    
+    def chat_multiturn_structured(self, response_format : Type[BaseModel], user_input: str, system_prompt: str = "", chat_history: list = None) -> BaseModel:
+        messages = []
+
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        if chat_history:
+            for m in chat_history:
+                if isinstance(m, dict) and "role" in m and "content" in m:
+                    messages.append(m)
+        # messages.append({"role": "user", "content": user_input})
+        response = self.client.beta.chat.completions.parse(
+            model=self.model_name,
+            messages=messages,
+            response_format=response_format
+        )
+        return response.choices[0].message.parsed

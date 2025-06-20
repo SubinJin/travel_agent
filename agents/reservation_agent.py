@@ -6,6 +6,7 @@ import logging
 from langchain_core.tools import tool
 from llm.llm_client import LLMClient
 from prompts.prompts import JUDGE_RESERVATION_SYSTEM, RESERVATION_SYSTEM_PROMPT
+from common.forms import ReservationSchema
 
 logger = logging.getLogger(__name__)
 REQUIRED_SLOTS = ["departure", "arrival", "start_date", "end_date"]
@@ -19,11 +20,9 @@ def extract_json_string(text: str) -> str:
 
 @tool
 def book_trip(slots: Dict[str, str]) -> str:
-    """모든 예약 정보를 바탕으로 mock 예약을 수행합니다."""
-    return (
-        f"{slots['departure']}에서 {slots['arrival']}까지 "
-        f"{slots['start_date']} ~ {slots['end_date']} 여행이 예약되었습니다!"
-    )
+    """모든 예약 정보를 바탕으로 여행 계획서를 작성해줍니다"""
+    message = f"{slots['arrival']}로 {slots['start_date']} ~ {slots['end_date']} 여행 일정으로 계획이군요. 여행 계획서도 같이 작성할까요?"
+    return message
 
 def llm_judges_cancel_intent(user_input: str) -> bool:
     system_prompt = JUDGE_RESERVATION_SYSTEM
@@ -56,20 +55,29 @@ def fill_slots(state: dict) -> dict:
         user_input = user_input,
         today = date.today())
     logger.info(f"[예약] user_input : {user_input}")
-    llm_output = llm.chat_multiturn(system_prompt = system_prompt, user_input = user_input).strip()
+    # llm_output = llm.chat_multiturn(system_prompt = system_prompt, user_input = user_input).strip()
+    llm_output = llm.chat_multiturn_structured(system_prompt = system_prompt, user_input = user_input, response_format=ReservationSchema)
+    
     logger.info(f"[예약] LLM 응답: {llm_output}")
     
     try:
-        cleaned = extract_json_string(llm_output)
-        result = json.loads(cleaned)
+        # cleaned = extract_json_string(llm_output)
+        # result = json.loads(cleaned)
+
+        # updated_slots = {
+        #     "departure": result.get("departure") or slots.get("departure", ""),
+        #     "arrival": result.get("arrival") or slots.get("arrival", ""),
+        #     "start_date": result.get("start_date") or slots.get("start_date", ""),
+        #     "end_date": result.get("end_date") or slots.get("end_date", ""),
+        # }
 
         updated_slots = {
-            "departure": result.get("departure") or slots.get("departure", ""),
-            "arrival": result.get("arrival") or slots.get("arrival", ""),
-            "start_date": result.get("start_date") or slots.get("start_date", ""),
-            "end_date": result.get("end_date") or slots.get("end_date", ""),
+            "departure": llm_output.departure or slots.get("departure", ""),
+            "arrival": llm_output.arrival or slots.get("arrival", ""),
+            "start_date": llm_output.start_date or slots.get("start_date", ""),
+            "end_date": llm_output.end_date or slots.get("end_date", ""),
         }
-        message = result.get("message", "죄송합니다. 응답을 생성하지 못했습니다.")
+        message = llm_output.message
 
         # 3. 슬롯이 모두 채워졌다면 → 예약 완료
         missing = [k for k in REQUIRED_SLOTS if not updated_slots.get(k)]
@@ -81,9 +89,9 @@ def fill_slots(state: dict) -> dict:
             return {
                 **state,
                 "agent_response": response,
-                "active_agent": None,
-                "intent": None,
-                "agent_state": {}  # 완료되었으므로 상태 초기화
+                "active_agent": "travel_plan",
+                "intent": "travel_plan",
+                "agent_state": {"slots": updated_slots}
             }
 
         logger.info(f"[예약] 리턴 직전 상태: active_agent={state.get('active_agent')}, intent={state.get('intent')}")
