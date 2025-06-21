@@ -20,28 +20,28 @@ def extract_json_string(text: str) -> str:
 
 @tool
 def book_trip(slots: Dict[str, str]) -> str:
-    """모든 예약 정보를 바탕으로 여행 계획서를 작성해줍니다"""
-    message = f"{slots['arrival']}로 {slots['start_date']} ~ {slots['end_date']} 여행 일정으로 계획이군요. 여행 계획서도 같이 작성할까요?"
+    """모든 스케줄 정보를 바탕으로 여행 계획서를 작성해줍니다"""
+    message = f"목적지는 {slots['arrival']}, {slots['start_date']} ~ {slots['end_date']} 여행 일정으로 계획이군요. 여행 계획서도 같이 작성할까요?"
     return message
 
 def llm_judges_cancel_intent(user_input: str) -> bool:
     system_prompt = JUDGE_RESERVATION_SYSTEM
     response = llm.chat_singleturn(user_input = user_input, system_prompt = system_prompt).strip().upper()
-    logger.info(f"[예약] 예약 중단 판단 결과: {response}")
+    logger.info(f"[스케줄] 스케줄 중단 판단 결과: {response}")
     return response == "YES"
 
 def fill_slots(state: dict) -> dict:
     slots = state.get("agent_state", {}).get("reservation", {})
     user_input = state.get("user_input", "")
-    logger.info(f"[예약] 현재 사용자 발화: {user_input}")
-    logger.info(f"[예약] 현재 슬롯 상태: {slots}")
+    logger.info(f"[스케줄] 현재 사용자 발화: {user_input}")
+    logger.info(f"[스케줄] 현재 슬롯 상태: {slots}")
 
-    # LLM을 통한 예약 중단 판단
+    # LLM을 통한 스케줄 중단 판단
     if llm_judges_cancel_intent(user_input):
-        logger.info("[예약] LLM이 중단 판단")
+        logger.info("[스케줄] LLM이 중단 판단")
         return {
             **state,
-            "agent_response": "알겠습니다. 예약을 중단할게요.",
+            "agent_response": "알겠습니다. 스케줄을 중단할게요.",
             "active_agent": None,
             "intent": None,
             "agent_state": {}  # 슬롯 초기화
@@ -54,11 +54,11 @@ def fill_slots(state: dict) -> dict:
         end_date = slots.get("end_date", ""),
         user_input = user_input,
         today = date.today())
-    logger.info(f"[예약] user_input : {user_input}")
+    logger.info(f"[스케줄] user_input : {user_input}")
     # llm_output = llm.chat_multiturn(system_prompt = system_prompt, user_input = user_input).strip()
     llm_output = llm.chat_multiturn_structured(system_prompt = system_prompt, user_input = user_input, response_format=ReservationSchema)
     
-    logger.info(f"[예약] LLM 응답: {llm_output}")
+    logger.info(f"[스케줄] LLM 응답: {llm_output}")
     
     try:
         # cleaned = extract_json_string(llm_output)
@@ -79,9 +79,9 @@ def fill_slots(state: dict) -> dict:
         }
         message = llm_output.message
 
-        # 3. 슬롯이 모두 채워졌다면 → 예약 완료
+        # 3. 슬롯이 모두 채워졌다면 → 스케줄 완료
         missing = [k for k in REQUIRED_SLOTS if not updated_slots.get(k)]
-        logger.info(f"[예약] 누락 슬롯: {missing}")
+        logger.info(f"[스케줄] 누락 슬롯: {missing}")
 
         if not missing:
             # response = book_trip(slots = updated_slots)
@@ -94,7 +94,7 @@ def fill_slots(state: dict) -> dict:
                 "agent_state": {"slots": updated_slots}
             }
 
-        logger.info(f"[예약] 리턴 직전 상태: active_agent={state.get('active_agent')}, intent={state.get('intent')}")
+        logger.info(f"[스케줄] 리턴 직전 상태: active_agent={state.get('active_agent')}, intent={state.get('intent')}")
         
         # 4. 누락 슬롯이 있다면 → LLM이 만든 멘트로 계속 유도
         return {
@@ -109,7 +109,7 @@ def fill_slots(state: dict) -> dict:
         }
 
     except Exception as e:
-        logger.warning(f"[예약] LLM 응답 파싱 실패: {e}")
+        logger.warning(f"[스케줄] LLM 응답 파싱 실패: {e}")
         return {
             **state,
             "agent_response": "죄송합니다. 방금 내용을 잘 이해하지 못했어요. 다시 말씀해 주세요.",

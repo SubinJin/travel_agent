@@ -25,6 +25,7 @@ INTENT_CLASSIFIER = """
 가능한 intent와 intent에 대한 설명입니다. 
 - calendar : 캘린더에 일정을 조회, 추가, 수정, 삭제하려는 의도
 - location_search : 여행 장소를 추천받거나 여행 장소에 대해 검색해보려는 의도
+- share_itinerary : 여행 계획표를 다운로드하거나 공유하려는 의도 
 - reservation : 여행 일정을 계획하려는 의도
 - unknown : 위 intent를 제외한 나머지 일상적인 대화 의도
 
@@ -46,7 +47,7 @@ JUDGE_RESERVATION_SYSTEM = """
 
 
 RESERVATION_SYSTEM_PROMPT = """
-당신은 여행 예약을 도와주는 전문 에이전트입니다.
+당신은 여행 스케줄 계획을 도와주는 전문 에이전트입니다.
 
 사용자의 발화를 바탕으로 다음 4가지 정보를 순차적으로 수집하세요:
 - 출발지 (departure)
@@ -227,6 +228,7 @@ CALENDAR_CREATE_SYSTEM_PROMPT = """\
   "location": "제주도",
   "start_date": "2025-07-20",
   "end_date": "2025-07-22"
+  "message" "답변"
 }
 
 응답은 반드시 JSON만 포함해.
@@ -236,6 +238,12 @@ CALENDAR_CREATE_SYSTEM_PROMPT = """\
 # 일정 수정을 위한 슬롯 채우기
 CALENDAR_UPDATE_SYSTEM_PROMPT = """\
 사용자가 기존 일정을 수정하려고 해.
+다만, 만약 니가 필요한 값들을 모르겠다면, 마음대로 생성하지 말고 사용자에게 알려달라고 해.
+사용자는 상대적인 시간 개념으로 너에게 일정 변경을 요청할 수 있어.
+{today}를 기준으로 하여 상대적인 시간을 계산해줘.
+그리고 종료일은 시작일보다 빠를 수 없어. 사용자가 시작일보다 종료일을 더 앞으로 두려고 하면 다시 물어봐야해.
+
+
 다음 항목들을 JSON 형식으로 추출해줘:
 
 - event_id: 수정할 일정의 고유 ID (사용자가 언급한 경우)
@@ -244,12 +252,13 @@ CALENDAR_UPDATE_SYSTEM_PROMPT = """\
 - end_date: 종료일 (예: 2025-07-23)
 
 형식 예시:
-{
+{{
   "event_id": "abcdef123456",
   "summary": "여행 일정 변경",
   "start_date": "2025-07-21",
   "end_date": "2025-07-23"
-}
+  "message" "답변"
+}}
 
 응답은 반드시 JSON만 포함해.
 """
@@ -258,12 +267,16 @@ CALENDAR_UPDATE_SYSTEM_PROMPT = """\
 # 일정 삭제를 위한 슬롯 채우기
 CALENDAR_DELETE_SYSTEM_PROMPT = """\
 사용자가 일정을 삭제하려고 해.
+다만, 만약 니가 event_id를 모른다면, 마음대로 생성하지 말고 사용자에게 알려달라고 해.
+
 다음 항목을 JSON 형식으로 추출해줘:
 
 - event_id: 삭제할 일정의 고유 ID
 
 형식 예시:
 {
+  "messgae" : "답변"
+  "summary" : "제주도 가족여행"
   "event_id": "abcdef123456"
 }
 
@@ -275,4 +288,22 @@ CALENDAR_DELETE_SYSTEM_PROMPT = """\
 CALENDAR_READ_SYSTEM_PROMPT = """\
 사용자가 기존 일정을 조회하려고 해.
 일정을 조회할 준비를 해줘. 별도의 슬롯은 필요 없어.
+"""
+
+# 
+JUDGE_SHARE_INTENT_SYSTEM_PROMPT = """
+당신은 여행 일정 공유 에이전트입니다.
+사용자가 공유를 원할 때까지 대화를 이어가세요.
+"""
+
+SHARE_FORMAT_SYSTEM_PROMPT = """
+당신은 사용자의 여행 일정을 어떤식으로 공유할지를 경정하도록 도와주는 에이전트입니다.
+사용자와 자유롭게 대화하되, 사용자가 pdf 또는 link로 share_format을 결정하도록 유도해주세요.
+
+{
+  "messgae" : "사용자의 질문에 대한 답변"
+  "share_format" : "사용자의 의도에 맞게 pdf 또는 link로 값을 채웁니다. 의도가 불분명하다면 빈 값으로 둡니다"
+}
+
+응답은 반드시 JSON만 포함해.
 """

@@ -7,6 +7,8 @@ from agents.reservation_agent import fill_slots
 from agents.location_search_agent import location_search_agent
 from agents.location_search_api_agent import location_search_api_agent
 from agents.travel_plan_agent import travel_plan_agent
+from agents.calendar_agent import calendar_agent
+from agents.share_agent import share_itinerary_agent
 
 from prompts.prompts import AGENT_DEFAULT_SYSTEM_PROMPT
 
@@ -22,18 +24,6 @@ def router_node(state: GraphState) -> GraphState:
 
 # 장소 검색 에이전트 호출    
 def run_travel_plan(state: GraphState) -> GraphState:
-    # logger.info("[run_travel_plan] 여행 계획서 노드 진입")
-    # result = travel_plan_agent(state)
-    
-    # # LangGraph에 선언된 GraphState 필드만 추출해서 전달
-    # return {
-    #     "user_input": result["user_input"],
-    #     "intent": result["intent"],
-    #     "agent_response": result["agent_response"],
-    #     "active_agent": result["active_agent"],
-    #     "agent_state": result["agent_state"],
-    #     "chat_history": result.get("chat_history", []),
-    # }
     logger.info("[run_travel_plan] 여행 계획서 노드 진입")
     # 1) GraphState.agent_state 안에 들어있는 slots, messages 꺼내기
     prev_agent_state = state.get("agent_state", {})
@@ -57,6 +47,7 @@ def run_travel_plan(state: GraphState) -> GraphState:
             "messages": result.get("messages", tool_state["messages"])
         },
         # LangGraph 쪽에서 'chat_history' 로 쓰고 싶으면 messages 를 그대로 넣어주세요
+        "itinerary": result.get("itinerary"),
         "chat_history": result.get("messages", tool_state["messages"])
     }
 
@@ -72,6 +63,7 @@ def run_location_search(state: GraphState) -> GraphState:
         "agent_response": result["agent_response"],
         "active_agent": result["active_agent"],
         "agent_state": result["agent_state"],
+        "itinerary": state.get("itinerary"),
         "chat_history": result.get("chat_history", []),
     }
     
@@ -87,6 +79,7 @@ def run_location_search_api(state: GraphState) -> GraphState:
         "agent_response": result["agent_response"],
         "active_agent": result["active_agent"],
         "agent_state": result["agent_state"],
+        "itinerary": state.get("itinerary"),
         "chat_history": result.get("chat_history", []),
     }
 
@@ -103,19 +96,40 @@ def run_reservation(state: GraphState) -> GraphState:
         "agent_response": result["agent_response"],
         "active_agent": result["active_agent"],
         "agent_state": result["agent_state"],
+        "itinerary": state.get("itinerary"),
         "chat_history": result.get("chat_history", []),
     }
 
 
 # 캘린더 에이전트 호출
 def run_calendar(state: GraphState) -> GraphState:
-    user_input = state["user_input"]
-
-    response = client.chat_multiturn(user_input)
+    logger.info("[run_calendar] 캘린더 CRUD 노드 진입")
+    result = calendar_agent(state)
 
     return {
-        **state,
-        "agent_response": response
+        "user_input":    result["user_input"],
+        "intent":        result.get("intent"),
+        "agent_response":result.get("agent_response"),
+        "active_agent":  result.get("active_agent"),
+        "agent_state":   result.get("agent_state", {}),
+        "itinerary":      state.get("itinerary"),
+        "chat_history":  result.get("agent_state", {}).get("chat_history", []),
+    }
+    
+def run_share_itinerary(state: GraphState) -> GraphState:
+    logger.info("[run_share] 공유 에이전트 노드 진입")
+    if not state.get("itinerary"):
+        state["itinerary"] = state.get("agent_state", {}).get("slots", {}).get("itinerary")
+    result = share_itinerary_agent(state)
+
+    return {
+        "user_input":     result.get("user_input"),
+        "intent":         result.get("intent"),
+        "agent_response": result.get("agent_response"),
+        "active_agent":   result.get("active_agent"),
+        "agent_state":    result.get("agent_state", {}),
+        "itinerary":      state.get("itinerary"),
+        "chat_history":   result.get("agent_state", {}).get("chat_history", []),
     }
 
 
@@ -142,6 +156,7 @@ def run_fallback(state: GraphState) -> GraphState:
 
     return {
         **state,
+        "itinerary": state.get("itinerary"),
         "agent_response": response
     }
 
@@ -152,11 +167,11 @@ def build_graph():
 
     workflow.add_node("router", router_node)
     workflow.add_node("calendar", run_calendar)
-    # workflow.add_node("weather", run_weather)
     workflow.add_node("reservation", run_reservation)
     workflow.add_node("location_search", run_location_search)
     workflow.add_node("location_search_api", run_location_search_api)
     workflow.add_node("travel_plan", run_travel_plan)
+    workflow.add_node("share_itinerary", run_share_itinerary)
     workflow.add_node("unknown", run_fallback)
 
     workflow.set_entry_point("router")
@@ -166,21 +181,20 @@ def build_graph():
         lambda state: state["intent"],
         {
             "calendar": "calendar",
-            # "weather": "weather",
-            # "menu": "menu",
             "reservation" : "reservation",
             "location_search" : "location_search",
             "location_search_api" : "location_search_api", 
             "travel_plan" : "travel_plan",
+            "share_itinerary" : "share_itinerary", 
             "unknown": "unknown"
         }
     )
     workflow.add_edge("calendar", END)
-    # workflow.add_edge("menu", END)
     workflow.add_edge("reservation", END)
     workflow.add_edge("location_search", END)
     workflow.add_edge("location_search_api", END)
     workflow.add_edge("travel_plan", END)
+    workflow.add_edge("share_itinerary", END)
     workflow.add_edge("unknown", END)
 
     return workflow.compile()

@@ -1,5 +1,6 @@
 import pytest
 import time
+import logging
 from tools.calendar_api import (
     create_calendar_event,
     get_calendar_events,
@@ -7,8 +8,15 @@ from tools.calendar_api import (
     delete_calendar_event
 )
 
+
+logger = logging.getLogger(__name__)
+
 # 공유: fixture로 생성한 일정 ID 저장
 event_id_holder = {}
+def sanitize_event_id(event_id: str) -> str:
+    # 좌우 어떤 괄호라도 제거
+    return event_id.strip("()")
+
 
 @pytest.mark.order(1)
 def test_create_event():
@@ -38,8 +46,8 @@ def test_get_events():
 
 @pytest.mark.order(3)
 def test_update_event():
-    time.sleep(5)
     event_id = event_id_holder.get("event_id")
+    event_id = sanitize_event_id(event_id)
     assert event_id is not None
 
     slots = {
@@ -53,8 +61,8 @@ def test_update_event():
 
 @pytest.mark.order(4)
 def test_delete_event():
-    time.sleep(5)
     event_id = event_id_holder.get("event_id")
+    event_id = sanitize_event_id(event_id)
     assert event_id is not None
 
     result = delete_calendar_event(event_id)

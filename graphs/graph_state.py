@@ -7,3 +7,4 @@ class GraphState(TypedDict):
     active_agent: Optional[str]  # 현재 진행 중인 agent 이름
     agent_state: Dict[str, Any]  # 슬롯 등 agent 내부 상태
     chat_history: List[Dict[str, str]]
+    itinerary: str

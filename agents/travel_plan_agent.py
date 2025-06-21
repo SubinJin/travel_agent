@@ -93,12 +93,17 @@ def travel_plan_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     slots["final_confirm"] = final_confirm
 
     # 최종 확정 여부 확인
-    if final_confirm.lower() in ("yes", "y", "확정", "네"):
+    logger.info(f"[여행플랜] final_confirm : {final_confirm}")
+    if final_confirm == "YES" :
+        logger.info(f"[여행플랜] 확정 진입 : {final_confirm}")
+        logger.info(f"[여행플랜] 확정 일정 : {itinerary}")
         return {
+            **state, 
             "agent_response": f"여행 계획이 확정되었습니다! 최종 일정:\n{itinerary}",
             "active_agent": None,
             "intent": None,
             "agent_state": {},
+            "itinerary": itinerary,
             "messages": history
         }
 
