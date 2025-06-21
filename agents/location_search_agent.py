@@ -11,18 +11,6 @@ from common.forms import LocationSchema
 logger = logging.getLogger(__name__)
 llm = LLMClient(service_name="openai", model_name="gpt-4o").get_client()
 
-
-def extract_json_string(text: str) -> str:
-    # ```json ~ ``` 제거
-    cleaned = re.sub(r"^```json|```$", "", text.strip(), flags=re.MULTILINE).strip()
-    return cleaned
-
-@tool
-def book_trip(slots: Dict[str, str]) -> str:
-    """모든 장소 검색 정보를 바탕으로 mock 장소검색을 수행합니다."""
-    return f"{slots.get('selected_place')}에 대한 상세 검색을 도와드릴게요. 궁금한 내용을 질문해주세요"
-
-
 def llm_judges_cancel_intent(user_input: str) -> bool:
     system_prompt = JUDGE_RESERVATION_SYSTEM
     response = llm.chat_singleturn(user_input = user_input, system_prompt = system_prompt).strip().upper()
@@ -30,6 +18,7 @@ def llm_judges_cancel_intent(user_input: str) -> bool:
     return response == "YES"
 
 def location_search_agent(state: dict) -> dict:
+    """여행 장소를 검색해주고 필요시 상세검색을 하도록 도와주는 에이전트"""
     slots = state.get("agent_state", {}).get("location_search", {})
     user_input = state.get("user_input", "")
     logger.info(f"[장소검색] 현재 사용자 발화: {user_input}")
@@ -54,13 +43,11 @@ def location_search_agent(state: dict) -> dict:
         user_input = user_input,
         )
     logger.info(f"[장소검색] user_input : {user_input}")
-    # llm_output = llm.chat_multiturn(system_prompt = system_prompt, user_input = user_input).strip()
+    
     llm_output = llm.chat_multiturn_structured(system_prompt = system_prompt, user_input = user_input, response_format=LocationSchema)
     logger.info(f"[장소검색] LLM 응답: {llm_output}")
     
     try:
-        # cleaned = extract_json_string(llm_output)
-        # result = json.loads(cleaned)
 
         updated_slots = {
             "region": llm_output.region or slots.get("region", ""),
@@ -96,10 +83,10 @@ def location_search_agent(state: dict) -> dict:
             "agent_response": "죄송합니다. 방금 내용을 잘 이해하지 못했어요. 다시 말씀해 주세요.",
             "agent_state": {
                 **state.get("agent_state", {}),
-                "reservation": slots
+                "unknown": slots
             },
-            "active_agent": "reservation",
-            "intent": "reservation"
+            "active_agent": "unknown",
+            "intent": "unknown"
         }
 
     

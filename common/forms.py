@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 
 class PlanSchema(BaseModel):
     itinerary: str

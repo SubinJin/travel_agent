@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 import streamlit as st
 from graphs.main_graph import build_graph
-from services.orchestrator import _client as llm_client
 
 # Streamlit 페이지 세팅
 st.set_page_config(page_title="여행 멀티 에이전트", layout="centered")
@@ -28,6 +27,14 @@ if "active_agent" not in st.session_state:
     st.session_state.active_agent = None
 if "intent" not in st.session_state:
     st.session_state.intent = None
+
+# 웰컴메세지
+if "welcome_shown" not in st.session_state:
+    st.session_state.chat_history.append((
+        "assistant",
+        "👋 안녕하세요! 여행 일정 플래너에 오신 것을 환영합니다.\n\n저는 여행 장소를 검색하고 여행 계획서를 작성할 수 있습니다. \n\n또, 여행 계획서를 다운로드하고 캘린더와 연동 해드릴 수 도 있어요. \n\n원하는 질문을 해주세요!"
+    ))
+    st.session_state.welcome_shown = True
 
 # 이전 대화 이력 출력
 for sender, msg in st.session_state.chat_history:

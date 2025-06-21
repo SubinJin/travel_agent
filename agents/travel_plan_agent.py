@@ -11,18 +11,6 @@ from common.forms import PlanSchema
 logger = logging.getLogger(__name__)
 llm = LLMClient(service_name="openai", model_name="gpt-4o").get_client()
 
-def extract_json_string(text: str) -> str:
-    """
-    Extract the JSON substring by finding the first '{' and the last '}'.
-    This handles cases where the model prepends natural language.
-    """
-    start = text.find('{')
-    end = text.rfind('}')
-    if start != -1 and end != -1 and end > start:
-        return text[start:end+1]
-    # fallback: strip fences and return cleaned
-    return re.sub(r"^```json|```$", "", text.strip(), flags=re.MULTILINE).strip()
-
 @tool
 def travel_plan_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     """여행 계획서 작성 및 수정, 최종 확정 에이전트"""

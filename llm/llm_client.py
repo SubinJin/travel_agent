@@ -13,7 +13,3 @@ class LLMClient:
 
     def get_client(self):
         return self.client
-    
-    # def stream_chat(self, user_message: str):
-    def stream_chat(self, messages: list[dict]):
-        return self.client.stream_chat(messages)

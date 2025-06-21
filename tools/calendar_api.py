@@ -2,10 +2,13 @@ import os
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import datetime
-from config.config import SERVICE_ACCOUNT_FILE, CALENDAR_ID
+from config.config import get_config
 
+config = get_config()
 # Google Calendar 설정
 SCOPES = ['https://www.googleapis.com/auth/calendar']
+SERVICE_ACCOUNT_FILE = config.get("SERVICE_ACCOUNT_FILE")
+CALENDAR_ID = config.get("CALENDAR_ID")
 
 # 인증 및 서비스 객체 생성
 credentials = service_account.Credentials.from_service_account_file(

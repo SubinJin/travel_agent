@@ -1,5 +1,7 @@
 import logging
 from typing import Dict, Any, List
+from langchain_core.tools import tool
+
 from llm.llm_client import LLMClient
 from prompts.prompts import SEARCH_RESULT_VALID_SYSTEM_PROMPT, SEARCH_RESULT_VALID_USER_PROMPT, SEARCH_QUERY_CLEANSE_SYSTEM_PROMPT, SEARCH_QUERY_CLEANSE_USER_PROMPT
 from tools.location_search_api import search_places
@@ -17,6 +19,7 @@ llm = LLMClient(service_name="openai", model_name="gpt-4o").get_client()
 #     return response == "YES"
 
 def location_search_api_agent(state: Dict[str, Any]) -> Dict[str, Any]:
+    """구글 장소 검색 API를 활용하여 사용자의 장소 질문에 답해주는 에이전트"""
     slots = state.get("agent_state", {}).get("location_search", {})
 
     # 0) 검색 중단 의사 판단

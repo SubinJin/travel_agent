@@ -12,26 +12,21 @@ logger = logging.getLogger(__name__)
 REQUIRED_SLOTS = ["departure", "arrival", "start_date", "end_date"]
 llm = LLMClient(service_name="openai", model_name="gpt-4o").get_client()
 
-
-def extract_json_string(text: str) -> str:
-    # ```json ~ ``` 제거
-    cleaned = re.sub(r"^```json|```$", "", text.strip(), flags=re.MULTILINE).strip()
-    return cleaned
-
-@tool
-def book_trip(slots: Dict[str, str]) -> str:
-    """모든 스케줄 정보를 바탕으로 여행 계획서를 작성해줍니다"""
-    message = f"목적지는 {slots['arrival']}, {slots['start_date']} ~ {slots['end_date']} 여행 일정으로 계획이군요. 여행 계획서도 같이 작성할까요?"
-    return message
-
 def llm_judges_cancel_intent(user_input: str) -> bool:
     system_prompt = JUDGE_RESERVATION_SYSTEM
     response = llm.chat_singleturn(user_input = user_input, system_prompt = system_prompt).strip().upper()
     logger.info(f"[스케줄] 스케줄 중단 판단 결과: {response}")
     return response == "YES"
 
-def fill_slots(state: dict) -> dict:
-    slots = state.get("agent_state", {}).get("reservation", {})
+@tool
+def scehdule_finish(slots: Dict[str, str]) -> str:
+    """모든 스케줄 정보를 바탕으로 여행 계획서를 작성해줍니다"""
+    message = f"목적지는 {slots['arrival']}, {slots['start_date']} ~ {slots['end_date']} 여행 일정으로 계획이군요. 여행 계획서도 같이 작성할까요?"
+    return message
+
+def travel_scehdule_agent(state: dict) -> dict:
+    """"여행 날짜와 장소 추천해주고 사용자의 여행 날짜와 장소를 입력받는 에이전트"""
+    slots = state.get("agent_state", {}).get("travel_schedule", {})
     user_input = state.get("user_input", "")
     logger.info(f"[스케줄] 현재 사용자 발화: {user_input}")
     logger.info(f"[스케줄] 현재 슬롯 상태: {slots}")
@@ -55,22 +50,11 @@ def fill_slots(state: dict) -> dict:
         user_input = user_input,
         today = date.today())
     logger.info(f"[스케줄] user_input : {user_input}")
-    # llm_output = llm.chat_multiturn(system_prompt = system_prompt, user_input = user_input).strip()
     llm_output = llm.chat_multiturn_structured(system_prompt = system_prompt, user_input = user_input, response_format=ReservationSchema)
     
     logger.info(f"[스케줄] LLM 응답: {llm_output}")
     
     try:
-        # cleaned = extract_json_string(llm_output)
-        # result = json.loads(cleaned)
-
-        # updated_slots = {
-        #     "departure": result.get("departure") or slots.get("departure", ""),
-        #     "arrival": result.get("arrival") or slots.get("arrival", ""),
-        #     "start_date": result.get("start_date") or slots.get("start_date", ""),
-        #     "end_date": result.get("end_date") or slots.get("end_date", ""),
-        # }
-
         updated_slots = {
             "departure": llm_output.departure or slots.get("departure", ""),
             "arrival": llm_output.arrival or slots.get("arrival", ""),
@@ -84,8 +68,8 @@ def fill_slots(state: dict) -> dict:
         logger.info(f"[스케줄] 누락 슬롯: {missing}")
 
         if not missing:
-            # response = book_trip(slots = updated_slots)
-            response = book_trip.invoke({"slots": updated_slots})
+            response = scehdule_finish.invoke({"slots": updated_slots})
+            
             return {
                 **state,
                 "agent_response": response,
@@ -102,10 +86,10 @@ def fill_slots(state: dict) -> dict:
             "agent_response": message,
             "agent_state": {
                 **state.get("agent_state", {}),
-                "reservation": updated_slots
+                "travel_schedule": updated_slots
             },
-            "active_agent": "reservation",
-            "intent": "reservation"
+            "active_agent": "travel_schedule",
+            "intent": "travel_schedule"
         }
 
     except Exception as e:
@@ -115,10 +99,10 @@ def fill_slots(state: dict) -> dict:
             "agent_response": "죄송합니다. 방금 내용을 잘 이해하지 못했어요. 다시 말씀해 주세요.",
             "agent_state": {
                 **state.get("agent_state", {}),
-                "reservation": slots
+                "travel_plan_agent": slots
             },
-            "active_agent": "reservation",
-            "intent": "reservation"
+            "active_agent": "travel_plan_agent",
+            "intent": "travel_plan"
         }
 
     

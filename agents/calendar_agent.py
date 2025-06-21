@@ -3,6 +3,8 @@ import re
 from datetime import date
 from pydantic import BaseModel
 from typing import Dict, Any
+from langchain_core.tools import tool
+
 from llm.llm_client import LLMClient
 from prompts.prompts import JUDGE_CALENDAR_CRUD_SYSTEM_PROMPT, JUDGE_CALENDAR_CRUD_USER_PROMPT, CALENDAR_CREATE_SYSTEM_PROMPT, CALENDAR_READ_SYSTEM_PROMPT, CALENDAR_UPDATE_SYSTEM_PROMPT, CALENDAR_DELETE_SYSTEM_PROMPT
 from common.forms import CalendarCreateSchema, CalendarReadSchema, CalendarUpdateSchema, CalendarDeleteSchema
@@ -23,6 +25,7 @@ def extract_id_from_message(msg: str) -> str:
     return m.group(1) if m else None
 
 def calendar_agent(state: Dict[str, Any]) -> Dict[str, Any]:
+    """구글 캘린더와 연동하여 CRUD를 수행하는 에이전트"""
     user_input = state["user_input"]
     agent_state = state.setdefault("agent_state", {})
 

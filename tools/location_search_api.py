@@ -1,13 +1,13 @@
 import os
 import requests
-from config.config import GOOGLE_PLACE_KEY
+from config.config import get_config
 
 def search_places(search_query: str) -> list[dict]:
-    
+    config = get_config()
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {
         "query": search_query,
-        "key": GOOGLE_PLACE_KEY,
+        "key": config.get("GOOGLE_PLACE_KEY"),
         "language": "ko"
     }
     resp = requests.get(url, params=params)

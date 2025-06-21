@@ -1,17 +1,15 @@
 import os
 from openai import OpenAI
 from prompts.prompts import INTENT_CLASSIFIER
-from dotenv import load_dotenv
+from config.config import get_config
 from typing import Type
 from pydantic import BaseModel
 
-
-load_dotenv()
-
 class OpenAIClient:
     def __init__(self, model_name: str):
+        config = get_config()
         self.model_name = model_name
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = OpenAI(api_key=config.get("OPENAI_API_KEY"))
 
     def classify_intent(self, user_message: str) -> str:
         prompt = INTENT_CLASSIFIER.format(user_message=user_message)

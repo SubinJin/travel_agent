@@ -1,5 +1,7 @@
 import logging
 from typing import Dict, Any
+from langchain_core.tools import tool
+
 from llm.llm_client import LLMClient
 from prompts.prompts import SHARE_FORMAT_SYSTEM_PROMPT
 from tools.share_tool import generate_itinerary_pdf, generate_shareable_link
@@ -11,8 +13,8 @@ llm = LLMClient(service_name="openai", model_name="gpt-4o").get_client()
 # 공유 가능한 형식
 VALID_FORMATS = ["pdf", "link"]
 
-
 def share_itinerary_agent(state: Dict[str, Any]) -> Dict[str, Any]:
+    """사용자의 여행 계획서를 pdf나 link 형식으로 제공하는 에이전트")"""
     logger.info("[공유] 에이전트 진입")
     user_input = state.get("user_input", "").strip()
     agent_state = state.setdefault("agent_state", {})
