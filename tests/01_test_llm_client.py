@@ -12,5 +12,6 @@ async def test_classify_intent():
 
     intent = client.classify_intent(message)
 
-    assert intent in ["calendar", "weather", "share", "unknown"]
+    assert intent in ["calendar", "location_search", "share_itinerary", "travel_schedule", "unknown"]
+
     logging.info(f"Intent: {intent}")

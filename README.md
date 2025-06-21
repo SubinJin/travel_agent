@@ -103,17 +103,17 @@ CALENDAR_ID=your_calendar_id
 ```bash
 # python 3.10
 pip install -r requirements.txt
-streamlit run frontend_app.py
+streamlit run ui/app.py
 ```
 
 ## ✅ 단위 테스트
 
 ```bash
-pytest tests/
+pytest tests/*
 ```
 
 ## 📸 에이전트 대화 내역
-
+u
 별도 캡처 파일 참조 (`asset/` 디렉토리 내 포함)
 
 ---
