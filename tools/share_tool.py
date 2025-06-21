@@ -23,7 +23,6 @@ def generate_itinerary_pdf(itinerary: str) -> str:
     HTML(string=html).write_pdf(file_path)
     return "요청하신대로 PDF 파일로 여행 일정을 다운로드 했습니다!"
 
-
 def generate_shareable_link(itinerary: str) -> str:
     base_dir = os.path.join(os.getcwd())
     os.makedirs(base_dir, exist_ok=True)

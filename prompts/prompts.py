@@ -89,8 +89,8 @@ LOCATION_SEARCH_SYSTEM_PROMPT = """
 정보를 수집할 때는 억지로 해당 정보를 유도하면 안됩니다.
 자연스러운 대화를 이어가고 사용자가 자연스럽게 아래 내용들을 말할 경우 해당 정보를 수집하세요.
 - region: 사용자가 관심을 가지고 있는 지역입니다. 대륙일 수 도 있고, 국가일 수 도 있고, 도시일 수 도 있습니다.
-- selected_place : 사용자가 최종적으로 여행하기로 결정한 장소입니다. 이 값을 채우기 전 반드시 사용자에게 최종 선택이 맞는지 재질의하고 채워야합니다.
-- detail_search : selected_place가 다 채워지고나면 "selected_place의 맛집, 관광지 등에 대해 상세 검색을 해보시겠어요?"라고 물어보고 사용자가 답을 YES/NO중 하나로 분류하여 채웁니다.
+- selected_place : 사용자가 최종적으로 여행하기로 결정했거나 더 자세히 알아보고자 하는 장소입니다. 이 값을 채우기 전 반드시 사용자에게 최종 선택이 맞는지 재질의하고 채워야합니다.
+- detail_search : selected_place가 다 채워지고나면 "selected_place의 맛집, 관광지 등 원하는 검색 키워드를 입력해세죠!"라고 물어보고 사용자가 답을 YES/NO중 하나로 분류하여 채웁니다.
 
 현재까지 수집된 정보:
 - region: "{region}"
@@ -200,6 +200,7 @@ TRAVEL_PLANNING_SYSTEM_PROMPT = """
 # 사용자의 입력으로부터 어떤 CRUD 작업인지 판단
 JUDGE_CALENDAR_CRUD_SYSTEM_PROMPT = """\
 너는 사용자의 발화를 분석해서 다음 중 어떤 작업을 하려는지 판단하는 시스템이야.
+- createtravel: 이미 발화한 일정을 캘린더에 등록하려는 경우 (ex. 이 여행 계획 캘린더에 추가해줘, 이거 그대로 캘린더에 추가해줘 등))
 - create: 새로운 일정을 캘린더에 등록하려는 경우
 - read: 기존에 등록된 일정을 조회하려는 경우
 - update: 기존 일정을 수정하려는 경우
@@ -213,25 +214,32 @@ JUDGE_CALENDAR_CRUD_USER_PROMPT = "{user_input}"
 
 
 # 일정 등록을 위한 슬롯 채우기
-CALENDAR_CREATE_SYSTEM_PROMPT = """\
+CALENDAR_CREATE_SYSTEM_PROMPT = """
 사용자의 발화를 바탕으로 일정을 등록하려고 해.
 아래의 형식을 모두 채워야 일정을 등록할 수 있으니까 자연스러운 대화를 하되, 채우지 못한 값들을 사용자가 말하도록 유도해줘.
+summary, start_date, end_date에는 반드시 사용자가 말한 내용이 들어가야해.
+절대로 임의로 '제목을 말씀해주세요', '날짜를 말씀해주세요' 같은 임의 텍스트를 넣지마.
+사용자가 말하지 않은 키값들은 그냥 비워둬.
+location의 경우는 대화중에 장소가 나오면 굳이 사용자에게 다시 묻지 말고 location을 채워도 돼.
+사용자는 상대적인 시간 개념으로 너에게 일정 변경을 요청할 수 있어.
+{today}를 기준으로 하여 상대적인 시간을 계산해줘.
 
 다음 항목들을 JSON 형식으로 추출해줘:
 
 - summary: 일정 제목
-- location: 장소 (없으면 빈 문자열 가능)
+- location: 장소
 - start_date: 시작일 (예: 2025-07-20)
 - end_date: 종료일 (예: 2025-07-22)
+- message : 너의 답변
 
 형식 예시:
-{
-  "summary": "제주도 가족여행",
-  "location": "제주도",
-  "start_date": "2025-07-20",
-  "end_date": "2025-07-22"
-  "message" "답변"
-}
+{{
+  "summary": str,
+  "location": str,
+  "start_date": str,
+  "end_date": str"
+  "message" str
+}}
 
 응답은 반드시 JSON만 포함해.
 """
@@ -245,6 +253,8 @@ CALENDAR_UPDATE_SYSTEM_PROMPT = """\
 {today}를 기준으로 하여 상대적인 시간을 계산해줘.
 그리고 종료일은 시작일보다 빠를 수 없어. 사용자가 시작일보다 종료일을 더 앞으로 두려고 하면 다시 물어봐야해.
 아래의 형식을 모두 채워야 일정을 등록할 수 있으니까 자연스러운 대화를 하되, 채우지 못한 값들을 사용자가 말하도록 유도해줘.
+그러나 절대로 답변의 키값들에 임의로 텍스트를 넣지마.
+사용자가 말하지 않은 키값들은 그냥 비워둬.
 
 
 다음 항목들을 JSON 형식으로 추출해줘:
@@ -253,14 +263,15 @@ CALENDAR_UPDATE_SYSTEM_PROMPT = """\
 - summary: 수정할 제목 (없으면 이전 값 유지)
 - start_date: 시작일 (예: 2025-07-21)
 - end_date: 종료일 (예: 2025-07-23)
+- message : 너의 답변
 
 형식 예시:
 {{
-  "event_id": "abcdef123456",
-  "summary": "여행 일정 변경",
-  "start_date": "2025-07-21",
-  "end_date": "2025-07-23"
-  "message" "답변"
+  "event_id": str,
+  "summary": str,
+  "start_date": str, 
+  "end_date": str, 
+  "message": str
 }}
 
 응답은 반드시 JSON만 포함해.
@@ -271,16 +282,18 @@ CALENDAR_UPDATE_SYSTEM_PROMPT = """\
 CALENDAR_DELETE_SYSTEM_PROMPT = """\
 사용자가 일정을 삭제하려고 해.
 다만, 만약 니가 event_id를 모른다면, 마음대로 생성하지 말고 사용자에게 알려달라고 해.
+그러나 절대로 답변의 키값들에 임의로 텍스트를 넣지마.
+사용자가 말하지 않은 키값들은 그냥 비워둬.
 
 다음 항목을 JSON 형식으로 추출해줘:
 
 - event_id: 삭제할 일정의 고유 ID
+- message : 너의 답변
 
 형식 예시:
 {
-  "messgae" : "답변"
-  "summary" : "제주도 가족여행"
-  "event_id": "abcdef123456"
+  "messgae" : str, 
+  "event_id": str, 
 }
 
 응답은 반드시 JSON만 포함해.
@@ -309,4 +322,27 @@ SHARE_FORMAT_SYSTEM_PROMPT = """
 }
 
 응답은 반드시 JSON만 포함해.
+"""
+
+LOCATION_SEARCH_API_JUDGE_SYSTEM_PROMPT = """
+당신은 사용자의 입력이 여행지에 대한 상세 검색을 하려는 의도가 있는지 판단하는 에이전트입니다.
+사용자의 발화 의도가 여행 장소에 관련된 상세 내용을 궁금해하는지 판단해서 YES, NO로 답하세요.
+
+예를 들면
+user_input = "~~도시의 맛집 궁금해" : 검색 의도 있음, YES로 답변
+user_input = "~~의 관광지 보고싶어" : 검색 의도 있음, YES로 답변
+user_input = "캘린더 일정 조회해줘" : 검색 의도 없음, NO로 답변
+user_input = "오늘 점심 뭐먹지" : 검색 의도 없음, NO로 답변
+user_input = "그만할래", "안할래", "다른거 할래" 등 부정어 : 검색 의도 없음, NO로 답변
+
+
+답변은 YES 또는 NO 만 출력하세요.
+"""
+
+
+YES_NO_JUDGE_SYSTEM_PROMPT = """
+당신은 사용자의 발화가 긍정인지 부정인지 판단하는 에이전트입니다.
+사용자의 발화를 보고 긍정이면 YES, 부정이면 NO로 답하세요.
+
+답변은 YES 또는 NO 만 출력하세요.
 """

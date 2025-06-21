@@ -8,3 +8,4 @@ class GraphState(TypedDict):
     agent_state: Dict[str, Any]  # 슬롯 등 agent 내부 상태
     chat_history: List[Dict[str, str]]
     itinerary: str
+    travel_schedule_result : Dict[str, Any]

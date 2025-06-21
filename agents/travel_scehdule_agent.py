@@ -4,8 +4,9 @@ from datetime import date
 from typing import Dict
 import logging
 from langchain_core.tools import tool
+from services.llm_judge import llm_judge
 from llm.llm_client import LLMClient
-from prompts.prompts import JUDGE_RESERVATION_SYSTEM, RESERVATION_SYSTEM_PROMPT
+from prompts.prompts import JUDGE_RESERVATION_SYSTEM, RESERVATION_SYSTEM_PROMPT, YES_NO_JUDGE_SYSTEM_PROMPT
 from common.forms import ReservationSchema
 
 logger = logging.getLogger(__name__)
@@ -28,20 +29,33 @@ def travel_scehdule_agent(state: dict) -> dict:
     """"여행 날짜와 장소 추천해주고 사용자의 여행 날짜와 장소를 입력받는 에이전트"""
     slots = state.get("agent_state", {}).get("travel_schedule", {})
     user_input = state.get("user_input", "")
+    intent = state.get("intent")
     logger.info(f"[스케줄] 현재 사용자 발화: {user_input}")
     logger.info(f"[스케줄] 현재 슬롯 상태: {slots}")
-
-    # LLM을 통한 스케줄 중단 판단
-    if llm_judges_cancel_intent(user_input):
-        logger.info("[스케줄] LLM이 중단 판단")
+    
+    if intent == "schedule_confirm":
+        # 사용자가 “아니오”라고 하면 탈출
+        resp = llm_judge(user_input = user_input, system_prompt= YES_NO_JUDGE_SYSTEM_PROMPT)
+        if resp == "NO" :
+            return {
+                **state,
+                "agent_response": "알겠습니다. 다른 궁금하신점은 없으신가요?",
+                "active_agent": None,
+                "intent": None,
+                "agent_state": {}
+            }
+        # “응” 계열이라면 바로 다음 에이전트로
+        updated = state["agent_state"]["slots"]
+        # response = scehdule_finish.invoke({"slots": updated})  # 필요하다면 메시지 재생성
         return {
             **state,
-            "agent_response": "알겠습니다. 스케줄을 중단할게요.",
-            "active_agent": None,
-            "intent": None,
-            "agent_state": {}  # 슬롯 초기화
+            "agent_response": "좋습니다. 관광, 먹거리, 멋진 풍경 등 원하는 여행 스타일을 대략적으로 말씀해주세요!",
+            "active_agent": "travel_plan",
+            "intent": "travel_plan",
+            "agent_state": {"slots": updated},
+            "travel_schedule_result": updated
         }
-        
+
     system_prompt = RESERVATION_SYSTEM_PROMPT.format(
         departure = slots.get("departure", ""),
         arrival = slots.get("arrival", ""),
@@ -69,13 +83,14 @@ def travel_scehdule_agent(state: dict) -> dict:
 
         if not missing:
             response = scehdule_finish.invoke({"slots": updated_slots})
-            
+            logger.info(f"[스케줄] 탈출할 때 : {updated_slots}")
             return {
                 **state,
                 "agent_response": response,
-                "active_agent": "travel_plan",
-                "intent": "travel_plan",
-                "agent_state": {"slots": updated_slots}
+                "active_agent": "travel_schedule",
+                "intent": "schedule_confirm",
+                "agent_state": {"slots": updated_slots},
+                "travel_schedule_result": updated_slots
             }
 
         logger.info(f"[스케줄] 리턴 직전 상태: active_agent={state.get('active_agent')}, intent={state.get('intent')}")

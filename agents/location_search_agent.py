@@ -57,13 +57,13 @@ def location_search_agent(state: dict) -> dict:
         message = llm_output.message
 
         # 2) detail_search 채워지면 종료
-        if updated_slots.get("detail_search"):
+        if updated_slots.get("detail_search") == "YES":
             return {
                 **state,
                 "agent_response": message,
                 "active_agent": "location_search_api",
                 "intent": "location_search_api",
-                "agent_state": {"location_search": slots},
+                "agent_state": {"location_search": updated_slots},
                 "user_input" : user_input
             }
         

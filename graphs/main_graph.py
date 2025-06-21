@@ -95,6 +95,7 @@ def run_travel_scehdule_agent(state: GraphState) -> GraphState:
         "agent_state": result["agent_state"],
         "itinerary": state.get("itinerary"),
         "chat_history": result.get("chat_history", []),
+        "travel_schedule_result": result["travel_schedule_result"]
     }
 
 # 캘린더 에이전트 호출
@@ -166,10 +167,12 @@ def build_graph():
         lambda state: state["intent"],
         {
             "calendar": "calendar",
+            # "calendar_confirm_create" : "calendar",
             "location_search" : "location_search",
             "location_search_api" : "location_search_api", 
             "travel_plan" : "travel_plan",
             "travel_schedule": "travel_schedule",
+            "schedule_confirm": "travel_schedule",
             "share_itinerary" : "share_itinerary", 
             "unknown": "unknown"
         }

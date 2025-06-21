@@ -27,6 +27,10 @@ if "active_agent" not in st.session_state:
     st.session_state.active_agent = None
 if "intent" not in st.session_state:
     st.session_state.intent = None
+if "itinerary" not in st.session_state:
+    st.session_state.itinerary = None
+if "travel_schedule_result" not in st.session_state:
+    st.session_state.travel_schedule_result = None
 
 # 웰컴메세지
 if "welcome_shown" not in st.session_state:
@@ -58,7 +62,9 @@ if user_input:
         "agent_response": None,
         "active_agent": st.session_state.active_agent,
         "agent_state": st.session_state.agent_state,
-        "chat_history": st.session_state.chat_history
+        "chat_history": st.session_state.chat_history,
+        "itinerary": st.session_state.itinerary,
+        "travel_schedule_result" : st.session_state.travel_schedule_result
     }
     result = graph.invoke(state)
 
@@ -66,6 +72,9 @@ if user_input:
     st.session_state.agent_state = result.get("agent_state", {})
     st.session_state.active_agent = result.get("active_agent", None)
     st.session_state.intent = result.get("intent", None)
+    st.session_state.itinerary = result.get("itinerary", None)
+    st.session_state.travel_schedule_result = result.get("travel_schedule_result", None)
+    
     final_response = result.get("agent_response", "죄송합니다. 응답을 생성하지 못했습니다.")
 
     # 스트리밍 출력

@@ -3,40 +3,28 @@ from typing import Dict, Any, List
 from langchain_core.tools import tool
 
 from llm.llm_client import LLMClient
-from prompts.prompts import SEARCH_RESULT_VALID_SYSTEM_PROMPT, SEARCH_RESULT_VALID_USER_PROMPT, SEARCH_QUERY_CLEANSE_SYSTEM_PROMPT, SEARCH_QUERY_CLEANSE_USER_PROMPT
+from services.llm_judge import llm_judge
+from prompts.prompts import SEARCH_RESULT_VALID_SYSTEM_PROMPT, SEARCH_RESULT_VALID_USER_PROMPT, SEARCH_QUERY_CLEANSE_SYSTEM_PROMPT, SEARCH_QUERY_CLEANSE_USER_PROMPT, LOCATION_SEARCH_API_JUDGE_SYSTEM_PROMPT
 from tools.location_search_api import search_places
 
 logger = logging.getLogger(__name__)
 llm = LLMClient(service_name="openai", model_name="gpt-4o").get_client()
 
-# def llm_judges_cancel_api(user_input: str) -> bool:
-#     """사용자가 API 검색을 중단하고자 하는지 LLM으로 판단"""
-#     response = llm.chat_singleturn(
-#         user_input=user_input,
-#         system_prompt=JUDGE_LOCATION_SEARCH_API_CANCEL
-#     ).strip().upper()
-#     logger.info(f"[API 에이전트] 검색 중단 판단 결과: {response}")
-#     return response == "YES"
 
 def location_search_api_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     """구글 장소 검색 API를 활용하여 사용자의 장소 질문에 답해주는 에이전트"""
     slots = state.get("agent_state", {}).get("location_search", {})
 
-    # 0) 검색 중단 의사 판단
-    # if llm_judges_cancel_api(user_input):
-    #     return {
-    #         **state,
-    #         "agent_response": "API 검색을 중단합니다.",
-    #         "active_agent": None,
-    #         "intent": None,
-    #         "agent_state": {}
-    #     }
     
     user_input = state.get("user_input", "").strip()
     region = slots.get("selected_place")
     
-    # 0) 사용자가 '그만'이라고 입력하면 API 검색 종료
-    if user_input.lower().startswith("그만"):
+    
+    keep_search = llm_judge(user_input = user_input, system_prompt = LOCATION_SEARCH_API_JUDGE_SYSTEM_PROMPT)
+    # 공백·개행 제거, 대문자 변환
+    keep_search = keep_search.strip().upper()
+    # 검색 중단 의사 판단
+    if keep_search == "NO" :
         return {
             **state,
             "agent_response": "상세 검색을 종료합니다. 다른 궁금한점을 물어보세요!",
@@ -44,6 +32,16 @@ def location_search_api_agent(state: Dict[str, Any]) -> Dict[str, Any]:
             "intent": None,
             "agent_state": {}
         }
+        
+    # # 0) 사용자가 '그만'이라고 입력하면 API 검색 종료
+    # if user_input.lower().startswith("그만"):
+    #     return {
+    #         **state,
+    #         "agent_response": "상세 검색을 종료합니다. 다른 궁금한점을 물어보세요!",
+    #         "active_agent": None,
+    #         "intent": None,
+    #         "agent_state": {}
+    #     }
     
     logger.info(f"[API 에이전트] 사용자 입력: {user_input}")
     logger.info(f"[API 에이전트] 지역: {region}")
@@ -67,7 +65,7 @@ def location_search_api_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     message = "상세 검색 결과입니다:\n" + response
 
     # 2) 재검색 안내
-    followup = ("\n\n 추가로 다른 키워드로 검색하시려면 키워드를 입력하세요. '그만'을 입력하시면 종료됩니다.")
+    followup = ("\n\n 추가로 다른 키워드로 검색하시려면 키워드를 입력하세요.")
     message += followup
 
     # 3) 상태 업데이트
