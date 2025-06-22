@@ -32,6 +32,7 @@
 
    - 상대적 시간(`today`) 정보를 프롬프트에 제공하여 정확한 일정 계산
    - Structured Output을 활용해 파싱 에러 방지 및 완성도 높은 슬롯 필링 구현
+   - LLM orchestrator, judge 등 llm을 통한 인텐트 분류와 분기 판단
    - Google Places API 쿼리 성능 향상을 위해 LLM으로 자연어 쿼리 정제
 
 
@@ -82,7 +83,9 @@ travel_agent
 │   └── share_tool.py
 ├── ui
 │   └── app.py
-├── itinerary_20250622_064736.md
+├── asset
+│   ├── 에이전트_대화_캡쳐.pdf
+│   ├── 여행일정_공유.py
 └── README.md
 
 ```
@@ -105,7 +108,11 @@ CALENDAR_ID=your_calendar_id
 pip install -r requirements.txt
 streamlit run ui/app.py
 ```
+### docker 실행
 
+```bash
+docker compose up --build -d
+```
 ## ✅ 단위 테스트
 
 ```bash
@@ -121,6 +128,6 @@ pytest tests/*
 
 - [에이전트 대화 샘플 PDF 다운로드](asset/에이전트_대화_캡처.pdf)
    > 위 링크는 제출 시 함께 포함된 `asset/에이전트_대화_캡쳐.pdf` 파일을 참조합니다.
-- [에이전트 여행 일정 공유 MD 다운로드](asset/여행일정_공유.pdf)
+- [에이전트 여행 일정 공유 pdf 다운로드](asset/여행일정_공유.pdf)
    > 위 링크는 제출 시 함께 포함된 `asset/여행일정_공유.md` 파일을 참조합니다.
 ---

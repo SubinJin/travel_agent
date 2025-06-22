@@ -1,0 +1,13 @@
+services:
+  travel-agent:
+    build: .
+    container_name: travel-agent
+    env_file: .env
+    ports:
+      - "8501:8501"
+    command:
+      - "streamlit"
+      - "run"
+      - "ui/app.py"
+      - "--server.port=8501"
+      - "--server.address=0.0.0.0"
