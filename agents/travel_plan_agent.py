@@ -87,7 +87,7 @@ def travel_plan_agent(state: Dict[str, Any]) -> Dict[str, Any]:
         logger.info(f"[여행플랜] 확정 일정 : {itinerary}")
         return {
             **state, 
-            "agent_response": f"여행 계획이 확정되었습니다! 최종 일정:\n{itinerary}",
+            "agent_response": f"여행 계획이 확정되었습니다! 최종 일정:\n\n{itinerary}",
             "active_agent": None,
             "intent": None,
             "agent_state": {},
