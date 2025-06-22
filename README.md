@@ -85,8 +85,10 @@ travel_agent
 │   └── app.py
 ├── asset
 │   ├── 에이전트_대화_캡쳐.pdf
-│   ├── 여행일정_공유.py
-└── README.md
+│   └── 여행일정_공유.py
+├── README.md
+├── Dockerfile
+└── docker-compose.yml
 
 ```
 
